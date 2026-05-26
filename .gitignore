@@ -1,0 +1,48 @@
+node_modules/
+HELP.md
+
+# Build output
+target/
+build/
+dist/
+nbbuild/
+nbdist/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data
+logs/
+*.log
+
+# Generated frontend
+src/main/frontend/generated/
+
+# STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# NetBeans
+/nbproject/private/
+/.nb-gradle/
+
+# VS Code
+.vscode/

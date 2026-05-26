@@ -1,0 +1,75 @@
+package com.esvar.dekanat.mark;
+
+import com.esvar.dekanat.dto.MarkDTO;
+import com.esvar.dekanat.entity.MarksEntity;
+import com.esvar.dekanat.entity.PlansEntity;
+import com.esvar.dekanat.entity.StudentEntity;
+import com.esvar.dekanat.entity.StudentGroupEntity;
+import com.esvar.dekanat.service.ControlMethodService;
+import com.esvar.dekanat.service.MarksService;
+import com.esvar.dekanat.service.StudentService;
+import com.esvar.dekanat.user.UserRepository;
+import com.esvar.dekanat.security.SecurityService;
+
+import java.sql.Timestamp;
+
+public class ModularMarkProcessor implements MarkProcessor {
+
+    private final MarksService marksService;
+    private final UserRepository userRepository;
+    private final SecurityService securityService;
+    private final StudentService studentService;
+    private final ControlMethodService controlMethodService;
+
+    public ModularMarkProcessor(MarksService marksService, UserRepository userRepository, SecurityService securityService, StudentService studentService, ControlMethodService controlMethodService1) {
+        this.marksService = marksService;
+        this.userRepository = userRepository;
+        this.securityService = securityService;
+        this.studentService = studentService;
+        this.controlMethodService = controlMethodService1;
+    }
+
+    @Override
+    public MarksEntity processMark(MarkDTO markDTO, PlansEntity plan, StudentGroupEntity group, String controlType) {
+        MarksEntity marksEntity = new MarksEntity();
+        // Отримання студента за ПІБ та групою
+        StudentGroupEntity targetGroup = group != null ? group : plan.getGroup();
+        if (targetGroup == null) {
+            throw new IllegalArgumentException("Не вдалося визначити групу для студента.");
+        }
+        marksEntity.setStudent(resolveStudent(markDTO, targetGroup));
+        marksEntity.setPlan(plan);
+        marksEntity.setControlMethod(controlMethodService.getControlMethodByName(controlType));
+        // Для спрощення цей рядок залишаємо як коментар.
+        marksEntity.setSemester(plan.getSemester());
+        // Для модульного контролю беремо введену оцінку
+        int grade = 0;
+        String enterMark = markDTO.getEnterMark();
+        if (enterMark != null && !enterMark.isEmpty()) {
+            try {
+                grade = Integer.parseInt(enterMark);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        marksEntity.setFinalGrade(grade);
+        marksEntity.setLocked(markDTO.isLocked());
+        marksEntity.setLastUpdated(new Timestamp(System.currentTimeMillis()));
+        marksEntity.setLastUpdatedBy(
+                securityService.getCurrentUserModel()
+                        .orElseThrow(() -> new IllegalStateException("No authenticated user"))
+        );
+        return marksEntity;
+    }
+
+    private StudentEntity resolveStudent(MarkDTO markDTO, StudentGroupEntity targetGroup) {
+        if (markDTO.getStudentId() != null) {
+            return studentService.findStudentById(markDTO.getStudentId());
+        }
+        return studentService.getStudentByStudentPIB_AndGroup(markDTO.getStudentPIB(), targetGroup);
+    }
+
+    @Override
+    public boolean isPersistedAfterProcessing() {
+        return false;
+    }
+}
